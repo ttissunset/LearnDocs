@@ -1,395 +1,3 @@
-### 1. 原型与原型链
-
-#### 1.1 原型与原型链的理解
-
-**原型链**是实现==对象继承==的核心机制，要想完整理解对象集成，我们首先需要了解以下概念：
-
-- **构造函数 constructor**：可通过 new 关键字调用的函数，如 Person()
-  - **构造函数中的 `this` 就是实例 **
-  - 构造函数的方法一般挂载到 `prototype` 上
-- **实例对象**：构造函数通过 `new` 构造的对象 `const person = new Person()`，person 就是 Person 的实例。 
-  - 实例对象包含一个 construct 属性指向他的构造函数 `person.constructor` 指向 Person()
-
-- **原型对象 prototype**：也称**原型**，是构造函数的一个属性，包含实例对象所**共享**的属性和方法
-  - ==原型对象永远指向另一个对象或者是 null==，我们也可以理解为**原型对象也是另外一个对象的实例**，因此我们可以通过 `__proto__`来获取"原型对象的原型对象"
-  - 由于原型对象是构造函数的一部分，因此我们可以通过 `Person.prototype` 获取 Person 的原型对象，同理我们可以通过 `Person.prototype.constructor`来获取原型对象的构造函数
-  - 我们可以通过 `person.__proto__`来获取实例原型，实例会从原型上继承属性和方法。也可以通过 `__proto__`来指定实例的原型。
-  - **原型对象的 `this` 也指向当前实例本身**
-- **原型链**：由原型对象层层继承的链接结构，通过 `__proto__` 属性链接
-  - ==当实例对象上不存在某个属性或方法时，会**沿着原型链向上查找**，直到找到或者到达原型链顶端为止==
-  - **原型链的顶端为 `Object.porototype`，原型链的终点为 null ，即 `Object.porototype --> null`**
-
-![image-20250807095258778](C:\Users\Administrator\AppData\Roaming\Typora\typora-user-images\image-20250807095258778.png)
-
-![image-20250807095817128](https://gitee.com/phenylaminopropionic-acid/photo/raw/master/image-20250807095817128.png)
-
-#### 1.2 获取和写入原型
-
-**继承的对象运行继承的方法时，它们将仅修改自己的状态，而不会修改 原型对象 的状态**
-
-```javascript
-// case 1
-let user = {
-  name: "John",
-  surname: "Smith",
-
-  set fullName(value) {
-    [this.name, this.surname] = value.split(" ");
-  },
-
-  get fullName() {
-    return `${this.name} ${this.surname}`;
-  }
-};
-
-let admin = {
-  __proto__: user,
-  isAdmin: true
-};
-
-// 由于 admin 的原型 user 存在 name 和 surname 属性，因此会调用 get 直接获取
-alert(admin.fullName); 
-
-// 此时调用了 set 方法修改了实例对象admin的 name 和 surname 属性，此时的 this 为 admin
-admin.fullName = "Alice Cooper"; 
-
-alert(admin.fullName); // Alice Cooper，admin 的内容被修改了
-alert(user.fullName);  // John Smith，user 的内容被保护了
-
-// case 2
-let animal = {
-  sleep() {
-    this.isSleeping = true;
-  }
-};
-
-let rabbit = {
-  name: "White Rabbit",
-  __proto__: animal
-};
-
-// 修改 rabbit.isSleeping
-rabbit.sleep();
-
-alert(rabbit.isSleeping); // true
-alert(animal.isSleeping); // undefined（原型中没有此属性）
-```
-
-
-
-### 2. this 指向与绑定
-
-- ==`this` 总是返回一个对象==
-
-* this 是执行上下文中的一个属性（在执行上下文被创建时确定的），它的值在**==函数被调用==**时动态确定
-* **在函数执行过程中，this一旦被确定，就不可更改了**。
-
-#### 2.1 以==函数的形式==调用时，this 默认指向全局对象
-
-- 浏览器中 `this` 指向 `window`，`Nodejs` 中指向 `global`
-
-- **严格模式下，`this` 会被绑定到 `undefined` 下**
-
-```js
-function showThis() {
-  console.log(this);
-}
-
-// 严格模式（'use strict'）下输出: undefined
-showThis(); // 浏览器中输出: Window {...}（非严格模式）
-```
-
-```javascript
-var foo = {
-    bar:10;
-    fn(){
-        console.log(this)
-        console.log(this.bar)
-    }
-}
-
-var fn2 = foo.fn
-fn2() // 输出: window undefined
-
-// 解析： fn2() 等价于直接调用 fn() 此时 fn 的 this 指向全局对象 window，并且 window 下是
-//       不存在 bar 属性的，因此输出 undefined
-```
-
-#### 2.2 当函数作为==对象的方法==调用时，this 指向调用该对象
-
-```js
-const user = {
-  name: "小明",
-  greet: function() {
-    console.log(this.name); // this → user 对象
-  }
-};
-
-user.greet(); // 输出: "小明"
-```
-
-⚠️ ==**隐式丢失陷阱**：**方法被赋值后调用会丢失原对象绑定！**==
-
-```js
-const greet = user.greet;
-// 此时可以视为函数被独立调用，故 this 指向了全局对象 window 或 undefined(严格模式下)
-greet(); // 输出: undefined（严格模式）或全局对象上的 name（非严格模式）
-```
-
-#### 2.3 使用 *new* 方法调用构造函数，this 指向该对象
-
-> 构造函数与原型对象的 this 都被实例对象所拥有，每个实例对象的 this 都是独立的
-
-```js
-function Person(name, age) {
-    this.name = name;
-    this.age = age; 
-}
-
-Person.prototype.getName = function() {
-     return this.name;
-  }
-
-// nick 为 Person 的实例对象，因此 Person 中的 this 指向 nick
-var nick = new Person(’Nick‘, 20);
-// nick 使 getName 函数的调用者，因此 getName 函数中的 this 也指向 nick
-nick.getName();
-```
-
-通过new操作符调用构造函数，会经历以下4个阶段：
-
-* 创建一个新的对象；
-
-* **==将构造函数的this指向这个新创建的实例对象==**；
-
-* 指向构造函数的代码，为这个对象添加属性，方法等；
-
-* 返回新对象。
-
-#### 2.4 箭头函数的 this
-
-==箭头函数并**没有属于⾃⼰的this**==，它所谓的this是**捕获其==外层作用域==的 this 值**，作为自己的this 值。
-
-> 由于箭头函数没有属于⾃⼰的this，因此箭头函数不能用作构造器，所以是**不会被new调⽤**的，这个所谓的this也不会被改变。
-
-```js
-const obj = { 
-  getArrow() { 
-    return () => { 
-      console.log(this === obj); 
-    }; 
-  } 
-}
-
-var x = 20
-const obj = { 
-   x:10,
-   test:() => { 
-      console.log(this); 
-      console.log(this.x); 
-    }; 
-  } 
-}
-
-obj.test() // 输出 window 20
-// 解析：这里的 this 其实指向 obj 对象的外层，即浏览器 window
-```
-
-#### 2.5 绑定事件的 this
-
-- DOM 处理绑定事件时，**==事件处理函数的 `this` 指向绑定事件的元素==**
-  - ==**事件处理函数的 `target` 指向触发事件的元素**==
-
-#### 2.6 ==使用call、apply显式指定 this==
-
-* 它们的**作用一模一样**，区别仅在于传入参数的形式的不同。 
-
-* `apply` 接受**两个参数**，**第一个参数指定了函数体内 this 对象的指向**， 第二个参数为一个带下标的**集合**，这个**集合可以为数组，也可以为类数组（`arguments` 数组**），`apply` 方法把这个集合中的元素作为参数传递给被调用的函数。 
-
-  * ```javascript
-    const arr = [1,2,3,4,5]
-    // 通过 apply 获取数组最大值
-    console.log(Math.max.apply(null, arr))
-    ```
-
-* `call` 接受**多个参数**，跟 apply 相同的是，**第一个参数也是代表函数体内的 this 指向**，从第二个参数开始往后，每个参数被依次传入函数
-
-* 注意：
-
-  * **==如果 `call/apply` 传递的对象为 `''/null/undefined` 则此时 `this` 仍指向全局==**
-  * **如果传递的值为 `number/true` 等类型，则 `this` 会指向对应的==包装对象==**
-
-
-```js
-function fn(num1, num2) {
-    console.log(this.a + num1 + num2);
-}
-var obj = {
-    a: 20
-}
-
-fn.call(obj, 100, 10); // 130
-fn.apply(obj, [20, 10]); // 50
-```
-
-#### ==2.7 总结：==
-
-```
-函数调用方式 → 决定 this 指向
-├─ new 调用 → 实例对象
-├─ call/apply/bind → 指定的对象
-├─ 对象方法调用 → 调用者对象
-├─ 箭头函数 → 外层作用域的 this
-└─ 普通函数调用 → 全局对象或 undefined（严格模式）
-```
-
-
-
-### 3. 执行上下文
-
-#### 3.1 基本概念
-
-执行上下文：可以看作是代码执行的**"运行环境"**，`javascript`中的所有代码都是在执行上下文中执行的。
-
-执行栈：控制代码的**执行顺序**的**调用栈（后进先出）**。每当有函数被调用，都会在**栈顶**为该函数创建一个上下文，处于**栈顶的上下文会被优先执行**，执行完毕后弹出将控制权交还给下一个执行上下文。
-
-在`javascript`中存在三种上下文，分别是：
-
-- **全局上下文：进入代码时创建（window 对象），永远处于栈底**
-- **函数上下文**：在 `function` 被函数调用时创建
-- ~~Eval 函数上下文~~
-
-#### 3.2 执行上下文生命周期
-
-##### 3.2.1 创建阶段
-
-在创建阶段，一共会处理三件事情，分别是：
-
-- **确定this的值**（见上文）
-- 变量和函数声明（**将变量和函数加入到花名册**）
-  - 变量声明又分为**变量环境**和**词法环境**
-    - `var` 声明的变量和 `function` 声明的函数都存在变量提升，会被提升到**==当前作用域==的顶端**
-  - **顶级函数声明会直接在全局声明该函数，并立即初始化创建该函数对象**
-
-| **特性**           | **变量环境（Variable Environment）**           | **词法环境（Lexical Environment）**              |
-| ------------------ | :--------------------------------------------- | :----------------------------------------------- |
-| **存储内容**       | `var` 声明的变量、**顶级函数**声明             | `let/const` 声明的变量、块级作用域               |
-| **作用域规则**     | 函数作用域或全局作用域                         | 块级作用域（如 `if/for`）                        |
-| **变量提升**       | 存在并初始化为 `undefined`，挂载到 `window` 中 | 存在但不可访问`uninitialized`，挂载到 `scope` 中 |
-| **块级作用域处理** | 无视块，穿透到函数或全局作用域                 | 严格遵循块级作用域                               |
-
-```javascript
-var a = 100 
-// 1. var a: undefined --> 创建阶段
-// 2. a = 100 --> 执行阶段
-```
-
-- **创建作用域链**（见下文）
-
-##### 3.2.2 执行阶段
-
-**按照代码顺序**依次进行**变量赋值**、**代码执行**、**函数引用**等操作
-
-##### 3.2.3 销毁阶段
-
-![img](https://cdn.nlark.com/yuque/0/2025/png/29434615/1739085920665-4b4ecc30-6426-433d-8178-e50265ae16f0.png?x-oss-process=image%2Fformat%2Cwebp)
-
-
-
-### 4. 作用域与作用域链
-
-#### 4.1 什么是作用域 Scope
-
-作用域是指**变量的==可用性代码范围==**，`javascript`中包含了三种不同的作用域，分别是：
-
-- 全局作用域：通常是浏览器中的 `window` 对象或 Node.js 中的 `global` 对象
-
-  - 在浏览器中，任何**在全局作用域中声明的变量都会被挂载到 `window`对象下** 
-
-  ```javascript
-  let globalVar = "Global Variable";
-  console.log(window.globalVar);  // 输出：Global Variable
-  ```
-- 函数作用域：**函数执行时生成的作用域**，在函数内部生效
-- 块级作用域：由`let/const` 声明加上最近的 `{}`所包裹的代码形成一个块级作用域。
-
-```javascript
-// { } 形成了一个块级做作用域
-{
-	let a = 100
-    const b = 200
-    console.log(a, b)
-    
-    // { } 属于内部的块级作用域
-    {
-        let c = 300
-    }
-}
-```
-
-==**作用域是分层的**，**内层作用域可以访问外层作用域**，反之不行==
-
-```javascript
-let globalVar = "I am global";  // 全局变量
-
-function testScope() {
-  let localVar = "I am local";  // 局部变量
-  console.log(globalVar);  // 可以访问全局变量
-  console.log(localVar);   // 可以访问局部变量
-}
-
-testScope();
-console.log(globalVar);  // 可以访问全局变量，输出：I am global
-console.log(localVar);   // 错误：外部作用域无法访问局部变量
-```
-
-#### 4.2 什么是作用域链
-
-- 作用域链是 `javascript` 中用于**查找变量和函数**的一种机制，本质上是**变量查找的路径**。
-- 每个 `javascript` 函数都会创建一个作用域链
-- 如果**在自己作用域找不到该变量就去父级作用域查找**，依次向上级作用域查找，直到访问到全局对象就被终止。如果在整个作用域链中都无法找到该变量，则会抛出 `ReferenceError` 异常。
-
-**作用域链保证了当前执行环境对符合访问权限的变量和函数的有序访问**，由于作用域链的存在，因此形成了一个新的概念：闭包
-
-#### 4.3 闭包 Closure
-
-##### 4.3.1 什么是闭包
-
-- 闭包是一种特殊的**对象**，通过 **保留作用域链** 冻结变量。==**闭包 = 函数 + 其创建时所在的作用域链**==
-- **通过闭包，我们可以在其他的执行上下文中，访问到函数的内部变量**
-
-```mermaid
-graph LR
-  A[函数创建] --> B[绑定当前词法环境]
-  B --> C[环境记录存储变量]
-  C --> D[外部引用指向父级环境]
-  D --> E[形成作用域链]
-```
-
-```javascript
-function outerFunction() {
-    let outerVariable = '我在outer函数里!';
-  
-    function innerFunction() {
-      console.log(outerVariable);
-    }
-  
-    return innerFunction;
-  }
-  
-  const innerFunc = outerFunction();
-  innerFunc(); // 输出: 我在outer函数里!
-```
-
-##### 4.3.2 闭包的使用场景
-
-- 创建**私有变量**
-- **==延长变量的生命周期==**，防止变量被回收 --> 可能导致**内存泄漏**
-- **柯里化函数**：避免频繁调用具有相同参数函数的同时，又能够轻松的重用
-- **计数器、延迟调用、回调等闭包的应用，其核心思想还是创建私有变量和延长变量的生命周期**
-
-
-
 ### 5. 立即执行函数
 
 #### 5.1 什么是立即执行函数
@@ -806,67 +414,7 @@ const arrayFromNodeList = [...nodeList];
 
 - 使用 **`Array.slice()`**
 
-
-
-### 7. 事件循环 Event Loop
-
-**事件循环**是  `javascript` 中用来**处理异步任务**的机制，确保**非阻塞**的任务执行
-
-- 单线程： `javascript` 的执行是**==单线程==**的，所有代码都在一个线程中运行
-- **同步任务与异步任务：同步任务会立即执行，而异步任务（如 `setTimeout`、网络请求）不会阻塞主线程，它们的==回调==会推迟到稍后执行**
-- **调用栈：用于管理同步任务**。每当 `javascript` 执行一个函数调用，它会被压入调用栈，执行完毕后弹出。
-- **任务队列：异步任务的回调函数**会被放入任务队列，等待调用栈清空后执行
-- ==**事件循环**：事件循环不断检查调用栈是否为空，如果为空，它会从任务队列中取出任务并执行==
-
-![image-20250708160727853](https://gitee.com/phenylaminopropionic-acid/photo/raw/master/image-20250708160727853.png)
-
-#### 7.1 任务队列
-
-任务队列划分为**宏任务队列`Macro Task Queue`和微任务队列 `Micro Task Queue`**：
-
-==**同步优先，微任务插队，宏任务排队**，**每次执行宏任务前，必须清空微任务队列**==
-
-|     特性     |                     同步任务                     |                            微任务                            |                    宏任务                    |
-| :----------: | :----------------------------------------------: | :----------------------------------------------------------: | :------------------------------------------: |
-| **执行时机** |                  主线程立即执行                  |                       在渲染前立即执行                       |                 在渲染后执行                 |
-| **队列处理** |              无队列，直接按顺序执行              |                      **一次性清空队列**                      |               每次只取一个任务               |
-|  **优先级**  |                       最高                       |                     次高（仅次同步代码）                     |                     最低                     |
-| **常见来源** | 普通代码（如 `console.log`）⭐**`new Promise(`)** | **`Promise.then/catch/finally`** **`$nextTick`**、DOM更新、`MutationObserver` | `setTimeout/setInterval` 、I/O回调、交互事件 |
-
-#### 7.2 事件循环流程（类似于服务员的一天）：
-
-1. 先处理所有到店顾客（同步代码）
-   `console.log(”欢迎光临“); // 立刻执行`
-2. 遇到特殊需求就记下来
-
-* 外卖订单（微任务）→ 记到外卖窗口的小本本上→ 加入微任务队列
-
-  `Promise.resolve().then(() => { console.log(”您的外卖已接单“) })`
-
-* 预约顾客（宏任务）→ 贴到堂食排队区的公告栏 → 加入宏任务队列
-
-  `setTimeout(() => { console.log(”预约顾客到店“) }, 0)`
-
-3. 完成当前所有到店顾客后，服务员会：
-
-* 先跑一趟外卖窗口，处理所有加急订单（清空微任务队列）
-* 再去堂食排队区叫一个顾客过来点餐（执行一个宏任务）
-* 重复这个流程直到打烊
-
-```javascript
-console.log(”【服务员】开始接待顾客“);
-setTimeout(() => { console.log(”【后厨】红烧肉做好了“) }, 0);
-Promise.resolve().then(() => { console.log(”【外卖】奶茶已打包“) });
-console.log(”【服务员】当前顾客点完菜“);
-
-// 输出顺序：
-// 1. 【服务员】开始接待顾客
-// 2. 【服务员】当前顾客点完菜
-// 3. 【外卖】奶茶已打包
-// 4. 【后厨】红烧肉做好了
-```
-
-
+  
 
 ### 8. Set 和 Map
 
@@ -1493,4 +1041,496 @@ exports.myFunction = () => {};
 
   
 
-### 15. 
+### 15. 迭代器 `Iterator`
+
+#### 15.1 迭代器
+
+##### 15.1.1 定义：==符合迭代器协议的对象==，用于==遍历==访问容器对象
+
+> 注意：默认情况下，一个**对象是不可迭代的**，需要指定要迭代的内容
+
+##### 15.1.2 可迭代协议 `iterable protocol`
+
+- 对象内部必须存在一个 **`next`** 方法、 
+- `next` 方法返回一个包含**两个属性**的对象：
+  - **`done`**：`Boolean`值，表示当前对象是否迭代完毕
+  - **`value`**：本次迭代的值，如果没有则返回 `undefined`，`done` 为 `true` 可省略
+
+```javascript
+const nums = [11, 22, 33, 44, 55]
+
+let index = 0
+// nums 的迭代器对象
+const numIterator = {
+	next: function(){
+		if(index < nums.length){
+		    return { done: false, value: nums[index++] }
+		} else {
+		    return { done: true }
+		}
+	}
+}
+
+// 生成数组通用迭代器对象
+function generateArrayIterator(arr){
+    let index = 0
+    return {
+        next: function(){
+            if(index < arr.length){
+                return { done: false, value: arr[index++] }
+            } else {
+                return { done: true }
+            }
+        }
+    }
+}
+```
+
+#### 15.2 可迭代对象
+
+需要满足以下两点：
+
+- 对象必须包含一个特定的**函数 `[Symbol.iterator]`** 用于实现 `@@Iterable` 方法 （**函数名不许改变！**）
+- `[Symbol.iterator]` 函数必须**返回一个迭代器**，用于迭代当前对象
+
+> 注意： `for...of...` 循环 用于**遍历可迭代对象**
+
+```javascript
+// infos 是一个可迭代对象
+const infos = {
+    nums: [11, 22, 33, 44, 55],
+    // 迭代对象的 nums 属性
+    [Symbol.iterator]: function() {
+        let index = 0
+        const numIterator = {
+            // 箭头函数没有自己的 this，会寻找上层的 this 作为自己的 this
+            next:() => {
+                if(index < this.nums.length){
+                    return { done: false, value: this.nums[index++] }
+                } else {
+                    return { done: true }
+                }
+            }
+        }
+        return numIterator
+    }
+}
+
+conts iterator = infos[Symbol.iterator]()
+
+--------------------------------------------------------------------------------
+
+// 迭代对象的 键、值、键值对
+const infos = {
+    name:'haha',
+    age: 18,
+    
+    [Symbol.iterator]: function() {
+        let index = 0
+        
+        // 获取对象所有的 键
+        const keys = Object.keys(this)
+        // 获取对象所有的 值
+        const values = Object.values(this)
+        // 获取对象所有的 键值对
+        const entries = Object.entries(this)
+        
+        const iterator = {
+            next: function() {
+                if(index < keys.length){
+                    return { done: false, value: keys[index++] }
+                } else {
+                    return { done: true }
+                }
+            }
+        }
+        return iterator
+    }
+}
+
+for(const item of infos){
+    const key = item
+    console.log(key)
+}
+```
+
+#### 15.3 原生迭代器对象
+
+- `String`
+- `Array`
+- `Map`
+- `Set`
+- `arguments`
+- `NodeList`
+
+![image-20260224102422969](https://gitee.com/phenylaminopropionic-acid/photo/raw/master/sunbox/image-20260224102422969.png)
+
+#### 15.4 自定义类的迭代
+
+ ```javascript
+ class Person(){
+     constructor(name, age, friends){
+         this.name =  name
+         this.age = age
+         this.friends = friends
+     }
+     
+     // 为所有 Person 对象实现迭代协议，用于迭代 friends 属性
+     [Symbol.iterator](){
+         let index = 0
+         const iterator = {
+             next: () => {
+                 if(index < this.friends.length){
+                     return { done: false, value: this.friends[index++] }
+                 } else {
+                     return { done: true }
+                 }
+             }
+         }
+         return iterator
+     }
+ }
+ 
+ const p = new Person("acxia", 22, ['zhong','li','hu'])
+ 
+ for(const item of p){
+     console.log(item)
+ }
+ // 'zhong'
+ // 'li'
+ // 'hu'
+ ```
+
+#### 15.5 迭代器的中断
+
+- `break`
+- `return`
+- `throw`
+
+```javascript
+class Person(){
+    constructor(name, age, friends){
+        this.name =  name
+        this.age = age
+        this.friends = friends
+    }
+    
+    // 为所有 Person 对象实现迭代协议，用于迭代 friends 属性
+    [Symbol.iterator](){
+        let index = 0
+        const iterator = {
+            next: () => {
+                if(index < this.friends.length){
+                    return { done: false, value: this.friends[index++] }
+                } else {
+                    return { done: true }
+                }
+            },
+            // 迭代器中包含一个 return 函数，可以监听迭代器是否执行完毕
+            return: () => {
+                console.log("监听到迭代器中断了")
+                return { done: true }
+            }
+        }
+        return iterator
+    }
+}
+
+const p = new Person("acxia", 22, ['zhong','li','hu'])
+
+for(const item of p){
+    console.log(item)
+    if(item === 'li') break
+}
+
+```
+
+
+
+### 16. 生成器 `Generator`
+
+生成器是一种**函数控制、使用**的方案，他可以让我们更加灵活的控制函数的执行和中断
+
+#### 16.1 生成器函数
+
+- 定义： **`function* fn `** 表示生成器函数
+- 生成器函数可以通过  **`yield`** 关键字控制函数的**执行流程**
+
+> 注意：**函数执行遇到 `yield` 时，会中断执行**
+
+- 生成器函数的**返回值是一个 `Generator ` 生成器对象**
+
+> 注意：**要执行生成器函数，需要调用生成器对象的 next 方法**
+
+- **==生成器事实上是一个特殊的迭代器==**
+
+```javascript
+// 生成器函数
+function* fn(){
+    console.log('111')
+    
+    // 接收生成器函数传递的参数
+    const str1 = yield '已输出111'
+    console.log('222', str1)
+    
+    yield '已输出222'
+    console.log('333')
+    
+    yield '已输出333'
+    // return 可省略
+    return undefined
+}
+
+// 生成器对象
+const generator = fn()
+
+console.log(generator.next())
+// '111'
+// { done: false, value: '已输出111'}
+
+// 生成器函数传参
+console.log(generator.next("next2"))
+// '222', 'next2'
+// { done: false, value: '已输出222'}
+
+console.log(generator.next())
+// '333'
+// { done: false, value: '已输出333'}
+
+console.log(generator.next())
+// { done: true, value: undefined }
+```
+
+```javascript
+// 生成器函数
+function* fn(){
+    console.log('111')
+    
+    // 接收生成器函数传递的参数
+    const str1 = yield '已输出111'
+    console.log('222', str1)
+    
+    const str2 = yield '已输出222'
+    console.log('333', str2)
+    
+    yield '已输出333'
+    // return 可省略
+    return undefined
+}
+
+// 生成器对象
+const generator = fn()
+
+console.log(generator.next())
+// '111'
+// { done: false, value: '已输出111'}
+
+// --- 通过 return() 函数 提前终止   ---
+console.log(generator.return("next2"))
+// { done: true, value: 'next2'}
+
+console.log(generator.next("next3"))
+// { done: true, value: undefined}
+
+console.log(generator.next("next4"))
+// { done: true, value: undefined'}
+```
+
+#### 16.2 生成器代替迭代器
+
+```javascript
+const nums = [1,2,3,4,5]
+
+function* createArrayIterator(arr){
+    for(let i = 0;i < arr.length;i++){
+        yield arr[i]
+    }
+}
+
+const arrIterator = createArrayIterator(nums)
+console.log(arrIterator.next()) // { done: false, value: 1}
+console.log(arrIterator.next()) // { done: false, value: 2}
+console.log(arrIterator.next()) // { done: false, value: 3}
+console.log(arrIterator.next()) // { done: false, value: 4}
+console.log(arrIterator.next()) // { done: false, value: 5}
+console.log(arrIterator.next()) // { done: true, value: undefined}
+```
+
+#### 16.3 `yield` 语法糖
+
+- **`yield*`** **用于生产一个可迭代对象，用于每次迭代该可迭代对象，每次迭代其中的一个值**
+
+```javascript
+const nums = [1,2,3,4,5]
+
+function* createArrayIterator(arr){
+	yield* arr
+}
+
+const arrIterator = createArrayIterator(nums)
+console.log(arrIterator.next()) // { done: false, value: 1}
+console.log(arrIterator.next()) // { done: false, value: 2}
+console.log(arrIterator.next()) // { done: false, value: 3}
+console.log(arrIterator.next()) // { done: false, value: 4}
+console.log(arrIterator.next()) // { done: false, value: 5}
+console.log(arrIterator.next()) // { done: true, value: undefined}
+```
+
+- 替代自定义可迭代类
+
+```javascript
+class Person(){
+    constructor(name, age, friends){
+        this.name =  name
+        this.age = age
+        this.friends = friends
+    }
+    
+    // 改造为生成器函数
+    *[Symbol.iterator](){
+		yield* this.friends
+    }
+}
+
+const p = new Person("acxia", 22, ['zhong','li','hu'])
+
+for(const item of p){
+    console.log(item)
+}
+// 'zhong'
+// 'li'
+// 'hu'
+```
+
+
+
+### 17. 属性描述符
+
+#### 17.1 获取属性描述符
+
+**`Object.getOwnPropertyDescriptor(对象，属性名)`** 用于获取对象中某个属性的属性描述符
+
+- **`value`**：属性的值
+- **`writable`**：属性是否可被重写（修改）
+- **`enumerable`**：属性是否可被遍历
+- **`configurable`**：当前属性的属性描述符是否可被修改
+- ==**`get`**：属性读取器 `getter` --> 当读取对象的属性时，相当于调用 `get()`==
+- ==**`set`**：属性设置器 `setter` --> 当修改对象的属性时，相当于调用 `set(val)`==
+
+```javascript
+let obj = {
+    a: 1,
+    b: 2
+}
+
+const desc = Object.getOwnPropertyDescriptor(obj，'a')
+console.log(desc)
+// {
+// 	   value: 1,  --> a 的值
+//     writable: true, --> a 可重写 - 可以修改 a 的值
+//     enumerable: true, --> a 可遍历 - 可通过console.log, for.in. 循环,Object.keys 等获取到属性 a
+//     configurable: true  --> a 的属性描述符可被修改
+// }
+```
+
+#### 17.2 设置属性描述符
+
+**`Object.defineProperty(对象，属性名，属性描述符)`**用于修改对象中某个属性的属性描述符
+
+> **如果对象中不存在当前属性，则会为当前对象添加该属性并定义属性描述符**
+
+```javascript
+let obj = {
+    a: 1,
+    b: 2
+}
+
+Object.defineProperty(obj,'a',{
+    value: 10,
+    writable: false
+})
+
+console.log(obj.value) // 10
+console.log(obj.writable) // false
+```
+
+#### 17.3 属性访问器
+
+- 读取对象的某个属性，相当于调用 `get()`
+- 设置对象的某个属性，相当于调用 `set()`
+
+```javascript
+let obj = {}
+
+Object.defineProperty(obj,'a',{
+	get: function() {
+        console.log('get')
+    	return 123
+    },
+    set: function(val) {
+        console.log('set')
+	}
+})
+
+obj.a = 3 + 2 --> // set(3+2) --> 输出： set
+console.log(obj.a) --> // console.log(get()) -->// 输出：get 123
+```
+
+#### 17.4 属性描述符实操
+
+```javascript
+class Goods{
+    constructor(g){
+        // 克隆原始对象
+        g = { ...g }
+        // 冻结对象，防止外部直接修改对象的属性
+        Object.freeze(g)
+        
+        Object.defineProperty(this, 'data', {
+            configurable: false,
+            get: function(){
+                  return g
+            },
+            set: function(val){
+                throw new Error('data 属性是支付的')
+            }
+        })
+        
+        let internalNumValue = 0
+		Object.defineProperty(this, 'num', {
+            configurable: false,
+            get: function(){
+                  return internalNumValue
+            },
+            set: function(val){
+                if(typeof val !== 'number'){
+                    throw new Error('val 属性必须为数字')
+                }
+                let temp = parseInt(val)
+                if(temp !== val){
+                    throw new Error('val 属性必须为整数')
+                }
+                if(value < 0){
+                    throw new Error('val 属性必须大于等于 0')
+                }
+                internalNumValue = val
+            }
+        })
+        
+        
+		Object.defineProperty(this, 'totalPrice', {
+            get: function(){
+                  return this.data.price * this.num
+            },
+        })
+        // 等价于：
+        // get totalPrice(){
+        // 	   return this.data.price * this.num
+        // }
+        
+        // 密封实例对象，防止用户增加实例对象属性
+        Object.seal(this)
+    }
+}
+```
+
