@@ -26,7 +26,28 @@
 
 #### 1.2 响应式的设计不同
 
-在 vue2 中是通过 **`Object.defineProperty()`** 实现响应式的，**无法检测对象属性的新增/删除和数组索引的修改**，我们需要通过 `Vue.set/Vue.delete` 等 API。
+在 vue2 中是通过 **`Object.defineProperty()`** 实现响应式的，而 `Object.defineProperty()` 的**==初衷并不是用来监听整个对象的而是为了定义普通的属性==**，因此**==无法检测对象属性的新增/删除和数组索引的修改==**，我们需要通过 `Vue.set/Vue.delete` 等 API来实现这些功能。
+
+```javascript
+// 通过 defineProperty 监听对象的变化
+const obj = {
+    name:'acman',
+    age: 22
+}
+
+const keys = Object.keys(obj)
+for(const key of keys){
+    let value = obj[key]
+    Object.defineProperty(obj, key, {
+        set: function(newVal){
+            value = newVal
+        },
+        get: function(){
+            return value
+        }
+    })
+}
+```
 
 在 vue3 中是通过 **`Proxy`** 对象进行**数据劫持**来实现响应式的，支持**动态属性件监听**。
 
@@ -49,7 +70,6 @@
 > handler.deleteProperty(target, propKey) -> delete 操作符的捕捉器 --  拦截删除target对象的propKey属性的操作
 > ```
 >
-> 
 
 #### 1.3 新增组件
 

@@ -433,9 +433,9 @@ var a = 100
 let globalVar = "I am global";  // 全局变量
 
 function testScope() {
-  let localVar = "I am local";  // 局部变量
-  console.log(globalVar);  // 可以访问全局变量
-  console.log(localVar);   // 可以访问局部变量
+	let localVar = "I am local";  // 局部变量
+	console.log(globalVar);  // 可以访问全局变量
+	console.log(localVar);   // 可以访问局部变量
 }
 
 testScope();
@@ -471,14 +471,14 @@ function outerFunction() {
     let outerVariable = '我在outer函数里!';
   
     function innerFunction() {
-      console.log(outerVariable);
+		console.log(outerVariable);
     }
   
     return innerFunction;
-  }
-  
-  const innerFunc = outerFunction();
-  innerFunc(); // 输出: 我在outer函数里!
+}
+
+const innerFunc = outerFunction();
+innerFunc(); // 输出: 我在outer函数里!
 ```
 
 ##### 5.3.2 闭包的使用场景
@@ -522,21 +522,21 @@ function outerFunction() {
 ```javascript
 // case 1
 let user = {
-  name: "John",
-  surname: "Smith",
+	name: "John",
+	surname: "Smith",
 
-  set fullName(value) {
-    [this.name, this.surname] = value.split(" ");
-  },
+	set fullName(value) {
+		[this.name, this.surname] = value.split(" ");
+	},
 
-  get fullName() {
-    return `${this.name} ${this.surname}`;
-  }
+	get fullName() {
+		return `${this.name} ${this.surname}`;
+	}
 };
 
 let admin = {
-  __proto__: user,
-  isAdmin: true
+	__proto__: user,
+	isAdmin: true
 };
 
 // 由于 admin 的原型 user 存在 name 和 surname 属性，因此会调用 get 直接获取
@@ -550,14 +550,14 @@ alert(user.fullName);  // John Smith，user 的内容被保护了
 
 // case 2
 let animal = {
-  sleep() {
-    this.isSleeping = true;
-  }
+	sleep() {
+		this.isSleeping = true;
+	}
 };
 
 let rabbit = {
-  name: "White Rabbit",
-  __proto__: animal
+	name: "White Rabbit",
+	__proto__: animal
 };
 
 // 修改 rabbit.isSleeping
@@ -569,8 +569,482 @@ alert(animal.isSleeping); // undefined（原型中没有此属性）
 
 
 
-### 7. 函数柯理化
+### 7. 内存管理
 
 
 
-### 8. 
+### 8. `Set` 和 `WeakSet`
+
+#### 8.1 `Set`
+
+##### 8.1.1 定义
+
+- `Set` 用于创建**无重复数据**的数据结构
+
+```javascript
+const set = new Set(Iterator)
+```
+
+##### 8.1.2 `Set` 属性
+
+- `size`：返回 `Set` 的元素个数
+
+##### 8.1.3 `Set` 方法
+
+- `add(val)`：向 `Set` 添加元，返回整个 `Set` 对象
+- `delete(val)`：从 `Set` 删除元素，返回 `Boolean`
+- `has(val)`：判断 `Set` 中是否存在某个元素，返回 `Boolean`
+- `clear()`：清空 `Set` 所有元素
+- `forEach(callback, [,thisArg])`：遍历 `Set` 
+
+```javascript
+const set = new Set()
+
+// add
+set.add(11)
+set.add(22)
+set.add(33)
+set.add(44)
+set.add(55)
+
+// delete
+console.log(set.delete(11)) // true
+
+// has
+console.log(set.has(22))  // true
+
+// clear
+set.clear()
+
+// forEach
+set.forEach(item => {
+    console.log(item)
+})
+
+// for..of..
+for(const item of set){
+    console.log(item)
+}
+```
+
+##### 8.1.4 应用场景
+
+- 数组去重
+
+```javascript
+const arr = [11, 22 ,11 ,33, 22, 55]
+const set = new Set(arr)
+const newArr = Array.from(set) // [11, 22 ,33 ,55]
+```
+
+#### 8.2 `WeakSet`
+
+##### 8.2.1 定义
+
+`WeakSet` 也是**不包含重复元素**的数据结构，与 `Set`存在以下两者区别：
+
+- `WeakSet` **只能存放对象数据类型**，不能存放基本数据类型
+- `WeakSet` ==对元素的引用是**弱引用**==，如果没有其它引用都某个对象进行引用，则 `GC` 可以回收该对象
+  - 由于 `WeakSet` 是弱引用，因此**不能对其进行遍历**，**无法获取到存储在 `WeakSet` 中的对象**
+
+```javascript
+const weakSet = new WeakSet()
+
+let obj1 = { value：1 }
+let obj2 = { value：2 }
+let obj2 = { value：2 }
+
+weakSet.add(obj1)
+weakSet.add(obj1)
+weakSet.add(obj1)
+```
+
+##### 8.2.2 `WeakSet` 方法
+
+- `add(val)`：向 `WeakSet` 添加元素，返回整个 `WeakSet` 对象
+- `delete(val)`：从 `WeakSet` 删除元素，返回 `Boolean`
+- `has(val)`：判断 `WeakSet` 中是否存在某个元素，返回 `Boolean`
+
+##### 8.2.3 应用场景
+
+```javascript
+const weakSet = new WeakSet()
+class Person(){
+    constructor(){
+        weakSet.add(this)
+    }
+    
+    running(){
+        if(!weakSet.has(this)){
+            throw new Error('调用方式不正确')
+        }
+        console.log("Person is Running")
+    }
+}
+
+const p = new Person()
+
+p.running() // 输出: Person is Running
+
+const runFn = p.running
+runFn()   // 输出: Type Error: 调用方式不正确的
+
+const obj = { run: p.running }
+obj.run()  // 输出: Type Error: 调用方式不正确的
+```
+
+
+
+### 9. `Map` 和 `WeakMap`
+
+#### 9.1 `Map`
+
+##### 9.1.1 定义
+
+- `Map` 用于创建**映射关系**的数据结构
+
+> `Q`：为什么已经存在对象存储结构了还需要创建 `Map` 这种数据结构？
+>
+> - 在对象的存储结构中，**键的类型只能是字符串类型**，所有的非字符串都会**转换为字符串类型**
+> - `Map` 存储结构可以使用对象等结构作为键的类型
+
+```javascript
+const map = new Map()
+```
+
+##### 9.1.2 `Map` 属性
+
+- `size`：返回 `Map` 的元素个数
+
+##### 9.1.2 `Map`方法
+
+- `set(key, value)`：向 `Map` 中添加键值对，返回整个 `map` 对象
+- `get(key)`：根据 `key` 获取 `Map` 中某个键的值 `value`
+- `has(key)`：判断 `Map` 中是否存在某个 `key`，返回 `Boolean`
+- `delete(key)`：根据 `key` 删除 `Map` 中的一个键值对，返回 `Boolean`
+- `clear()`：清空 `Map` 所有元素
+- `forEach(callback, [,thisArg])`：遍历 `Map` 
+
+```javascript
+const map = new Map()
+
+// set
+map.set('11', 11)
+mapt.set('22', 22)
+mapt.set('33', 33)
+mapt.set('44', 44)
+mapt.set({ num:'55' }, 55)
+// 修改已有键值对
+set.set('11', 111)
+
+// get
+map.get({ num:'55' }) // 输出： 111
+
+// delete
+console.log(map.delete('11')) // true
+
+// has
+console.log(map.has('22'))  // true
+
+// clear
+map.clear()
+
+// forEach
+map.forEach(item => {
+    console.log(item)
+})
+
+// for..of..
+for(const item of map){
+    const [key, val] = item
+    console.log(key, val)
+}
+```
+
+#### 9.2 `WeakMap`
+
+##### 9.2.1 定义
+
+`WeakMap` 是类似于 `Map` 的映射关系的数据结构，有以下两点不同
+
+- `WeakMap` **只能使用对象作为 `key`，不接受其他类型作为 `key`**
+- `WeakMap` 的 `key`  ==对对象的引用是**弱引用**==，如果没有其它引用都某个对象进行引用，则 `GC` 可以回收该对象
+  - 由于 `WeakMap` 是弱引用，因此**不能对其进行遍历**，**无法获取到存储在 `WeakMap` 中的键值对**
+
+##### 9.2.2 `WeakMap`方法
+
+- `set(key, value)`：向 `WeakMap` 中添加键值对，返回整个 `WeakMap` 对象
+- `get(key)`：根据 `key` 获取 `WeakMap` 中某个键的值 `value`
+- `has(key)`：判断 `WeakMap` 中是否存在某个 `key`，返回 `Boolean`
+- `delete(key)`：根据 `WeakMap` 删除 `Map` 中的一个键值对，返回 `Boolean`
+
+##### 9.2.3 应用场景
+
+
+
+### 10 `ES7+` 新特性
+
+#### 10.1 指数运算符 **
+
+```javascript
+console.log(Math.pow(2,2)) // 4
+console.log(2 ** 2) // 4
+```
+
+#### 10.2 `Object.valus` 
+
+- **获取对象的所有值的数组**
+
+```javascript
+const obj = {
+    1: 1,
+    2: 2
+}
+
+const values = Object.values(obj)
+console.log(values) // [1, 2]
+```
+
+#### 10.3 `Object.entries` 
+
+- **获取对象的所有键值对的数组，==得到的结果支持 `for..of` 遍历==**
+
+>  `Object.entries` 也支持**对数组和字符串使用**
+>
+> ```javascript
+> console.log(Object.entries('11'))// {['0', '1'],['1', '1']}
+> console.log(Object.entries(['11','22']))// {['0', '11'],['1', '22']}
+> ```
+
+```javascript
+const obj = {
+    1: 1,
+    2: 2
+}
+
+const entries = Object.entries(obj)
+console.log(entries) // [{ key: 1, value: 1}, { key: 2, value: 2}]
+
+for(const item of entries){
+    const [key, value] = item
+    console.log(key, value)
+}
+```
+
+#### 10.4 `String padding`字符串填充
+
+- `padStart(num, val)`：从字符串**左侧**开始，**使用 `val` 填充至 `num` 位数**
+- `padEnd(num, val)`：从字符串**右侧**开始，**使用 `val` 填充至 `num` 位数**
+
+```javascript
+const str = 5
+
+console.log(str.padStart(3, '0')) // '003'
+console.log(str.padEnd(3, '0')) // '300'
+```
+
+#### 10.5 属性描述符
+
+##### 10.5.1 获取属性描述符
+
+**`Object.getOwnPropertyDescriptor(对象，属性名)`** 用于获取对象中某个属性的属性描述符
+
+- **`value`**：属性的值
+- **`writable`**：属性是否可被重写（修改）
+- **`enumerable`**：属性是否可被遍历 -- 是可通过`console.log / for.in. / Object.keys` 等获取对象属性
+- **`configurable`**：当前属性的属性描述符是否可被修改
+- ==**`get`**：属性读取器 `getter` --> 当读取对象的属性时，相当于调用 `get()`==
+- ==**`set`**：属性设置器 `setter` --> 当修改对象的属性时，相当于调用 `set(val)`==
+
+```javascript
+let obj = {
+    a: 1,
+    b: 2
+}
+
+const desc = Object.getOwnPropertyDescriptor(obj，'a')
+console.log(desc)
+// {
+// 	   value: 1,  --> a 的值
+//     writable: true, --> a 可重写 - 可以修改 a 的值
+//     enumerable: true, --> a 可遍历 - 
+//     configurable: true  --> a 的属性描述符可被修改
+// }
+```
+
+##### 10.5.2 设置属性描述符
+
+**`Object.defineProperty(对象，属性名，属性描述符)`**用于修改对象中某个属性的属性描述符
+
+> **如果对象中不存在当前属性，则会为当前对象添加该属性并定义属性描述符**
+
+```javascript
+let obj = {
+    a: 1,
+    b: 2
+}
+
+Object.defineProperty(obj,'a',{
+    value: 10,
+    writable: false
+})
+
+console.log(obj.value) // 10
+console.log(obj.writable) // false
+```
+
+##### 10.5.3 属性访问器
+
+- 读取对象的某个属性，相当于调用 `get()`
+- 设置对象的某个属性，相当于调用 `set()`
+
+```javascript
+let obj = {}
+
+Object.defineProperty(obj,'a',{
+	get: function() {
+        console.log('get')
+    	return 123
+    },
+    set: function(val) {
+        console.log('set')
+	}
+})
+
+obj.a = 3 + 2 --> // set(3+2) --> 输出： set
+console.log(obj.a) --> // console.log(get()) -->// 输出：get 123
+```
+
+##### 10.5.4 属性描述符实操
+
+```javascript
+class Goods{
+    constructor(g){
+        // 克隆原始对象
+        g = { ...g }
+        // 冻结对象，防止外部直接修改对象的属性
+        Object.freeze(g)
+        
+        Object.defineProperty(this, 'data', {
+            configurable: false,
+            get: function(){
+                  return g
+            },
+            set: function(val){
+                throw new Error('data 属性是支付的')
+            }
+        })
+        
+        let internalNumValue = 0
+		Object.defineProperty(this, 'num', {
+            configurable: false,
+            get: function(){
+                  return internalNumValue
+            },
+            set: function(val){
+                if(typeof val !== 'number'){
+                    throw new Error('val 属性必须为数字')
+                }
+                let temp = parseInt(val)
+                if(temp !== val){
+                    throw new Error('val 属性必须为整数')
+                }
+                if(value < 0){
+                    throw new Error('val 属性必须大于等于 0')
+                }
+                internalNumValue = val
+            }
+        })
+        
+        
+		Object.defineProperty(this, 'totalPrice', {
+            get: function(){
+                  return this.data.price * this.num
+            },
+        })
+        // 等价于：
+        // get totalPrice(){
+        // 	   return this.data.price * this.num
+        // }
+        
+        // 密封实例对象，防止用户增加实例对象属性
+        Object.seal(this)
+    }
+}
+```
+
+#### 10.6 `flat，flatMap` 扁平化 
+
+- `Array.flat(deep)`：`deep` 需要扁平化的数组深度，**返回一个新数组**
+
+```javascript
+const arr = [ 1,2, [3, 4], [[5,6],[7,8]]]
+
+console.log(arr.flat(1)) //  [1,2,3,4,[[5,6],[7,8]]]
+console.log(arr.flat(2)) //  [1,2,3,4,5,6,7,8]
+```
+
+- `flatMap()`：先通过 `map` 函数映射每个元素，再将结果压缩为一个新数组
+  - 注意：`flatMap()` 相当于实现了 `flat(1)`
+
+```javascript
+const messages = [
+    "Hello World",
+    "Hello Duck"
+]
+
+const res = messages.flatMap(item => item.split(" "))
+
+// 等价于
+const res1 = messages.map(item => item.split(" ")
+const res2 = res1.flat(1)
+```
+
+
+
+### 11. Proxy - Reflect
+
+#### 11.1 Proxy
+
+##### 11.1.1 定义
+
+`Proxy` 是 `ES6` 新增的**类`new Proxy(obj, handler)`**，用于**创建一个代理**，从而实现监听对象的变化
+
+- `obj`：需要代理的对象
+- `handler`：对代理对象的处理，是一个**对象**，包含以下捕获器
+  -  **`get: funxtion(target, property, receiver)`**
+    - `target`: 目标对象
+    - `property`：被获取的属性 key
+    - `receiver`：代理对象
+  - **`set: funxtion(target, property, value, receiver)`**
+    - `target`: 目标对象
+    - `property`：被获取的属性 key
+    - `value`: 被设置的属性的值   
+    - `receiver`：代理对象
+  - `deleteProperty()`：监听属性的删除
+  - `has()`：监听 `in` 操作符的使用
+  - `getPrototypeOf()`：获取对象的原型
+  - `setPrototypeOf()`：设置对象的原型
+  - `isExtensible()`：判断对象是否可以新增属性
+  - `apply()`：监听函数对象的 `apply` 方法
+
+```javascript
+const obj = {
+    name:'acman',
+    age: 22
+}
+
+const proxy = new Proxy(obj, {
+    get: funxtion(target, property, receiver){
+    	return target[key]
+    },
+    set: funxtion(target, property, value, receiver){
+		target[key] = value
+	}
+})
+```
+
+#### 11.2 Reflect
+
+
+
