@@ -1015,7 +1015,7 @@ const res2 = res1.flat(1)
   -  **`get: funxtion(target, property, receiver)`**
     - `target`: 目标对象
     - `property`：被获取的属性 key
-    - `receiver`：代理对象
+    - `receiver`：代理对象，即通过 `new Proxy` 创建的对象
   - **`set: funxtion(target, property, value, receiver)`**
     - `target`: 目标对象
     - `property`：被获取的属性 key
@@ -1046,5 +1046,85 @@ const proxy = new Proxy(obj, {
 
 #### 11.2 Reflect
 
+##### 11.2.1 定义
+
+`Reflect` 是 `ES6` 新增的**对象**，字面意思是 **反射**，用于对**对象进行各种操作**
+
+> `Q：`为什么有 `Object`，还需要新增 `Reflect` 对象？
+>
+> - **`Object` 作为构造函数**，本身并不适合将各种**类方法**直接挂载到身上，这样会导致所有继承自 `Object`的类（如：`Function、Math..`）都自动继承这些方法
+> - `Reflect` 可以做到**不操作原对象**，常配合 `Proxy` 使用
+> - `Reflect` 继承了 `Object` 的部分方法，但存在细微的差异，使得**更加符合面向对象的规范**
+
+##### 11.2 `Reflect` 常见方法
+
+- **`Reflect.deleteProperty(target, key)`：删除 `target` 对象的 `key` 属性，返回 `boolean`**
+- `Reflect.defineProperty(target, key, desc)`：定义 `target` 对象的属性描述符，返回 `boolean`
+- `Reflect.getPropertyOf(target)`：获取`target` 对象的所有属性
+- `Reflect.setPropertyOf(target, prototype)`：设置`target` 对象的原型，返回 `boolean`
+- **`Reflect.has(target， key)`：判断`target` 对象的是否包含 `key` 属性，返回 `boolean`**
+- **`Reflect.get(target， prototype, receiver)`：获取`target` 对象的 `key` 属性的值**
+- **`Reflect.set(target， prototype, value, receiver)`：设置`target` 对象的 `key` 属性的值**，返回 `boolean`
+
+> **`Reflect.get()` 和 `Reflect.set()` 的第最后一个参数用于设置 `target` 的 `this` 指向**，如果不指定则默认为 `target`
+
+- `Reflect.constructor(target，arguments，origin)`：将 `origin` 的 `this` 指向 `target`，并传入参数 `arguments`，借用 `target` 的构造函数
+
+```javascript
+const obj = {
+    _name:'acman',
+    set: () => {
+        this._name = name
+    },
+    get: () => {
+        return this._name
+    }
+}
+
+const proxy = new Proxy(obj, {
+    get: funxtion(target, property, receiver){
+    	return Reflect.get(target， key, receiver)
+    },
+    set: funxtion(target, property, value, receiver){
+		const result = Reflect.set(target， key, value, receiver)
+        if(!result){
+            throw new Error(`设置${target}失败`)
+        }
+	}
+})
+
+proxy.name = 'acxia'
+// 1. 调用 proxy 的 set 方法
+// 2. 调用 obj 的 set 方法，因为 Reflect.set(target， key, value, receiver) 第四个参数指定了 receiver，因此将 obj 的 set 的 this 指向了 proxy 对象
+// 3. 再次触发 proxy 的 set 方法，设置 obj 的 _name 的新值
+```
 
 
+
+### 12 `Promise`
+
+
+
+### Storage
+
+#### 1. `localStorage`
+
+- **本地存储**，**永久性**的存储方法，除非用于手动清除
+
+#### 2. `SessionStorage`
+
+- **会话存储**，**会话期间**的存储方法，关闭会话后内容清除
+
+#### 3. `Cookie`
+
+#### 4. `IndexDB`
+
+
+
+### 正则表达式
+
+
+
+
+
+### 网络请求
